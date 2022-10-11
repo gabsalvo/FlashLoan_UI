@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlashLoan | Proof of Concept</title>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="icon" href="./favicon.svg" />
+</head>
+<body>
+    
+    <!--STEP 0 Connect to metamsk-->
+    <h1>FlashLoan - Proof of Concept</h1>
+    <p>Hello! This is a theory-based project that I've developed to get a deep insight on how FlashLoans work.</p>
+    <p>I had the chance to learn and practice with MetaMask API, ethers.js, Solidity. </p>
+    <p style="font-weight: bold;">What is a FlashLoan? <a href="https://www.youtube.com/watch?v=YiF6x193fRk" target="_blank">Find out here!</a></p>
+    <h3>STEP 0 </h3>
+    <p>First thing First we will need to connect a Web Wallet!</p>
+    <button class="connect">Connect to Metamask</button>
+
+    <!--STEP 1 Add LINK-->
+    <h3>STEP 1 </h3>
+    <p>For the sake of completeness, I've added the feature to add LINK-AAVE to your Wallet!</p>
+    <button class="add">Add Link to Wallet</button>
+     <!--STEP 2 Get aave Link -->
+     <h3>STEP 2</h3>
+     <p>You'll actually need LINK-AAVE for this project! Get some on the official website!</p>
+     <a class="site" href="https://staging.aave.com/reserve-overview/?underlyingAsset=0x07c725d58437504ca5f814ae406e70e21c5e8e9e&marketName=proto_goerli_v3" target="_blank">Get Aave Link</a>
+
+     <!--STEP 3 Function Send Aave-Link to Contract 0xDc9500688C6e29218d0688886e3bB4429963F7ca-->
+     <h3 style="margin-top: 20px;">STEP 3</h3>
+     <p>We need to fuel our contract to request a FlashLoan!</p>
+     <button class="send">Fund Contract</button>
+     <a  onclick="return false" style="text-decoration: none;" href="" target="_blank" class="fund"></a>
+
+     <!--STEP 4 Function GetBalance Of-->
+     <h3>STEP 4</h3>
+     <p>Let's check if STEP 3 worked!</p>
+     <button class="get">Get Balance Of Contract</button>
+
+
+    <!-- STEP 5 Function Request FlashLoan-->
+    <h3>STEP 5</h3>
+    <p>This is the truly fun part! We're going to request a LINK-AAVE FlashLoan and we're going to pay it back straight away!</p>
+    <button class="request">Request FlashLoan</button>
+    <a href="" target="_blank" class="scan">Look at the Transaction on EtherScan</a>
+
+    <h3>STEP 6</h3>
+    <button class="show">Show FlashLoan Solidity Code</button>
+    <pre class="code">
+    <code class="pres">
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.10;
+
+import {FlashLoanSimpleReceiverBase} from "@aave/core-v3/contracts/flashloan/base/FlashLoanSimpleReceiverBase.sol";
+import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
+import {IERC20} from "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
+
+contract FlashLoan is FlashLoanSimpleReceiverBase {
+    address payable owner;
+
+    constructor(address _addressProvider)
+        FlashLoanSimpleReceiverBase(IPoolAddressesProvider(_addressProvider))
+    {
+        owner = payable(msg.sender);
+    }
+
+    function executeOperation(
+        address asset,
+        uint256 amount,
+        uint256 premium,
+        address initiator,
+        bytes calldata params
+    ) external override returns (bool) {
+        uint256 amountOwed = amount + premium;
+        IERC20(asset).approve(address(POOL), amountOwed);
+
+        return true;
+    }
+
+    function requestFlashLoan(address _token, uint256 _amount) public {
+        address receiverAddress = address(this);
+        address asset = _token;
+        uint256 amount = _amount;
+        bytes memory params = "";
+        uint16 referralCode = 0;
+
+        POOL.flashLoanSimple(
+            receiverAddress,
+            asset,
+            amount,
+            params,
+            referralCode
+        );
+    }
+
+    function getBalance(address _tokenAddress) external view returns (uint256) {
+        return IERC20(_tokenAddress).balanceOf(address(this));
+    }
+
+    function withdraw(address _tokenAddress) external onlyOwner {
+        IERC20 token = IERC20(_tokenAddress);
+        token.transfer(msg.sender, token.balanceOf(address(this)));
+    }
+
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "Only the contract owner can call this function"
+        );
+        _;
+    }
+
+    receive() external payable {}
+
+}
+    </code>
+  </pre>
+    <!--Importing Ethers.js-->
+    <script
+    src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
+    type="application/javascript"
+  ></script>
+<!--Importing Scripts-->
+<script src="./logic.js"></script>
+<script src="./getBalance&Loan.js"></script>
+</body>
+</html>
